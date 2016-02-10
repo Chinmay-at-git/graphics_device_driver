@@ -12,7 +12,7 @@
 #include <linux/delay.h>
 #include <linux/ioctl.h>
 //#include <linux/asm/mmap.h>
-
+#include <linux/cred.h>
 #include <linux/errno.h>
 #include "lab3_def.h"
 #define BUFF_SIZE (19*4)
