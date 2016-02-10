@@ -294,7 +294,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case START_DMA:
 			fifo_write(Flush,0x00);
 			// START DMA should use arg from user to identify which buffer is done ?
-			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].u_buffer_addr.handle)<<6);
+			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].u_buffer_addr)<<6);
 			fifo_write(BufferA_Config,((unsigned int)dma_buffers[0].count) & mask); // Just check one dma
 			
 			fifo_write(Flush,0x00);
