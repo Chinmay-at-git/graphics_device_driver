@@ -25,6 +25,13 @@ MODULE_AUTHOR("CS");
 long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg);
 void fifo_flush(void);
 
+
+/*
+
+How the buffer must be written?
+Should we give registers and values as we done in Fifo?
+
+*/
 struct dma_header_struct
 {
 	uint32_t address:14;
@@ -120,7 +127,7 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 	size_ram = K_READ_REG(Device_RAM);
 	size_ram = size_ram * 1024* 1024;
 	kyouko3.k_card_ram_base = ioremap(kyouko3.p_card_ram,size_ram);
-	kyouko3.user_id =   current->uid;
+	kyouko3.user_id =0;//   current->uid;
 	init_fifo();
 	return 0;
 }
@@ -273,7 +280,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			dma_buffers[i].count=0;
 			dma_buffers[i].u_buffer_addr = vm_mmap(fp, (unsigned long)(dma_buffers[i].handle),BUFF_SIZE*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
 			check = copy_to_user((unsigned int *) arg, &(dma_buffers[0].handle), sizeof(unsigned int));
-			if (check)
+			if(check)
 			{
 				printk(KERN_ALERT "copy to user failure");
 				return -1;
@@ -286,9 +293,9 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		
 		case START_DMA:
 			fifo_write(Flush,0x00);
-			
-			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].handle)<<6);
-			fifo_write(BufferA_Config,((unsigned int)dma_buffers[0].count) & mask);
+			// START DMA should use arg from user to identify which buffer is done ?
+			fifo_write(BufferA_Addr,((unsigned int)u_buffer_addr[0].handle)<<6);
+			fifo_write(BufferA_Config,((unsigned int)u_buffer_addr[0].count) & mask);
 			
 			fifo_write(Flush,0x00);
 			fifo_flush();
