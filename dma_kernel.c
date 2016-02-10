@@ -15,7 +15,7 @@
 #include <linux/cred.h>
 #include <linux/errno.h>
 #include "lab3_def.h"
-#define BUFF_SIZE (19*4)
+#define BUFF_SIZE (172)
 #define pci_vendor_ids_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORCI_KYOUKO3 0x1113
 #define Device_RAM 0x0020
@@ -295,7 +295,8 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			fifo_write(Flush,0x00);
 			// START DMA should use arg from user to identify which buffer is done ?
 			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].u_buffer_addr)<<6);
-			fifo_write(BufferA_Config,((unsigned int)dma_buffers[0].count) & mask); // Just check one dma
+			fifo_write(BufferA_Config,(unsigned int)(BUFF_SIZE));
+			// Debug stage Just check one dma
 			
 			fifo_write(Flush,0x00);
 			fifo_flush();

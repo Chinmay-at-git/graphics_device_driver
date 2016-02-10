@@ -58,7 +58,7 @@ struct dma_header_struct dma_header;
 
 int main(void)
 {
-	int i,fd,result,ret;
+	int i,fd,result,p1,ret;
 	char dummy;
 	struct FIFO_entry my_entry;
 	struct FIFO_entry try_entry;
@@ -89,35 +89,74 @@ int main(void)
 	dma_header.address = arg;
 	dma_header.opcode = 0x14;
 	dma_header.count = 3;
+	p1 = 0;
+	arg[p1++] = *(unsigned int *)&dma_header;
 	
-	arg[0] = *(unsigned int *)&dma_header;
-	
-	arg[1] = int_var;
-    arg[2] = 0;
-	arg[3] = 0;
-	
-	arg[4] = int_not_bytwo;
-	arg[5] = int_not_bytwo;
-	arg[6] = 0;
-	//done with one vertex
-	arg[7] = int_var;
-		arg[8] =  0;
-	arg[9] = 0;
-	
-	arg[10] = int_bytwo;
-	arg[11] = int_bytwo;
-	arg[12] = 0;
+	arg[p1++] = Primitive;
+    arg[p1++] = 1;
+		arg[p1++] = Vertex_Color + 0;
+	arg[p1++] = int_var;
 	//done with second vertex
-	arg[13] = int_var;
-		arg[14] =  0;
-	arg[15] = 0;
+	arg[p1++] = Vertex_Color + 4;
+	arg[p1++] =  0;
+	arg[p1++] = Vertex_Color + 8;
+	arg[p1++] = 0;
+	arg[p1++] = Vertex_Color + 12;
+	arg[p1++] = 0;
+	//
+	arg[p1++] = Vertex_Coordinate + 0;
+	arg[p1++] = int_not_bytwo;
 	
-	arg[16] = int_byeight;
-	arg[17] = int_bytwo;
-	arg[18] = 0;
-	printf("DMA comleted ");
-	ioctl(fd,VMODE,GRAPHICS_OFF);
+	arg[p1++] = Vertex_Coordinate + 4;
+	arg[p1++] = int_not_bytwo;
+	//done with one vertex
+	arg[p1++] = Vertex_Coordinate + 8;
+	arg[p1++] =  0;
+	arg[p1++] = Vertex_Coordinate + 12;
+	
+	arg[p1++] = int_var;
+
+	arg[p1++] = Vertex_Emit;
+	arg[p1++] = 0;
+	
+	arg[p1++] = Vertex_Coordinate + 0;
+	arg[p1++] = int_bytwo;
+	arg[p1++] = Vertex_Coordinate + 4;
+	arg[p1++]= 0;
+	arg[p1++]= Vertex_Coordinate + 8;
+	arg[p1++]= 0;
+	arg[p1++] = Vertex_Coordinate + 12;
+	arg[p1++] = int_var;
+	arg[p1++] = Vertex_Emit;
+	arg[p1++] = 0;
+
+		arg[p1++] = Vertex_Coordinate + 0;
+	arg[p1++] = int_bytwo;
+	arg[p1++] = Vertex_Coordinate + 4;
+	arg[p1++]= int_byeight;
+	arg[p1++]= Vertex_Coordinate + 8;
+	arg[p1++]= 0;
+	arg[p1++] = Vertex_Coordinate + 12;
+	arg[p1++] = 0;
+	arg[p1++] = Vertex_Emit;
+	arg[p1++] = 0;
+	
+		arg[p1++] = Vertex_Coordinate + 0;
+	arg[p1++] = int_bytwo;
+	arg[p1++] = Vertex_Coordinate + 4;
+	arg[p1++]= 0;
+	arg[p1++]= Vertex_Coordinate + 8;
+	arg[p1++]= 0;
+	arg[p1++] = Vertex_Coordinate + 12;
+	arg[p1++] = 0;
+	arg[p1++] = Vertex_Emit;
+	arg[p1++] = 0;
+	
+	printf("DMA completed ? ");
 	ioctl(fd,START_DMA,&arg);
+	sleep(5);
+	ioctl(fd,VMODE,GRAPHICS_OFF);
+
 	ioctl(fd,FIFO_FLUSH);
 	printf("User exiting");
 	close(fd);
