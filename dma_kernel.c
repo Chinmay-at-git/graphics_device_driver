@@ -231,11 +231,11 @@ void fifo_write_F(unsigned int reg, float value)
 
 void fifo_flush(void)
 {
-	K_WRITE_REG(FIFOHead,kyouko3.fifo.head);
+	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 //	wait_on_fifo(); 
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
-		kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
+		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 		schedule();
 	}
 	// You may wanna make it a separate function -done
@@ -244,7 +244,7 @@ void fifo_flush(void)
 };
 void fifo_flush_SMP(void)
 {
-	K_WRITE_REG(FIFOHead,kyouko3.fifo.head);
+	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 //	wait_on_fifo(); 
 	/*while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
@@ -309,7 +309,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case START_DMA:
 			fifo_write(Flush,0x00);
 			// START DMA should use arg from user to identify which buffer is done ?
-			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].handle)<<6);
+			fifo_write(BufferA_Address,((unsigned int)dma_buffers[0].handle)<<6);
 			fifo_write(BufferA_Config,(unsigned int)(19)); // Hard code to be changed
 			// Debug stage Just check one dma
 			
@@ -332,7 +332,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 				K_WRITE_REG(0x9000+_DVirtX,0);
 				K_WRITE_REG(0x9000+_DVirtY,0);
 				K_WRITE_REG(0x9000+_DFrame,0);
-				K_WRITE_REG(Accl,0x40000000);
+				K_WRITE_REG(Acceleration,0x40000000);
 				
 				
 				K_WRITE_REG(ModeSet,0);
@@ -357,7 +357,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 				//fifo_write(Flush,0x00);
 				fifo_flush();
 				//K_WRITE_REG(Reboot,1);
-				K_WRITE_REG(Accl,0x80000000);
+				K_WRITE_REG(Acceleration,0x80000000);
 				K_WRITE_REG(ModeSet,0);
 			}
 			break;
