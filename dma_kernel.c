@@ -1,4 +1,4 @@
-
+//Note change of header file lab3_def.c to defs.h
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -14,8 +14,8 @@
 //#include <linux/asm/mmap.h>
 #include <linux/cred.h>
 #include <linux/errno.h>
-#include "lab3_def.h"
-#define BUFF_SIZE (172)
+#include "defs.h"
+#define BUFF_SIZE (19*4)
 #define pci_vendor_ids_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORCI_KYOUKO3 0x1113
 #define Device_RAM 0x0020
@@ -242,7 +242,19 @@ void fifo_flush(void)
 	
 //	FIFO_FLUSH: Mirror the fifo in in driver. 
 };
-
+void fifo_flush_SMP(void)
+{
+	K_WRITE_REG(FIFOHead,kyouko3.fifo.head);
+//	wait_on_fifo(); 
+	/*while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
+	{
+		kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
+		//schedule();
+	}
+	// You may wanna make it a separate function -done
+	*/
+//	FIFO_FLUSH: Mirror the fifo in in driver. 
+};
 // FIFO_QUEUE :
 /*
 void fifo_queue(unsigned int arg)
@@ -270,16 +282,19 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 	unsigned int mask= 1<<31;
 	switch(cmd)
 	{
+		case UNBIND_DMA:
+		return 0; // TO be filled!!
+		break;
 		case BIND_DMA:
 		printk(KERN_DEBUG "Binding DMA");
 		for(i=0;i<NO_OF_BUFFS ; i++)
 		{
 			kyouko3.dma_fill=0;
 			kyouko3.dma_drain=0;
-			dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, BUFF_SIZE, &dma_buffers[i].handle);
+			dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &dma_buffers[i].handle);
 			dma_buffers[i].count=0;
-			dma_buffers[i].u_buffer_addr = vm_mmap(fp, (unsigned long)(dma_buffers[i].handle),BUFF_SIZE*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
-			check = copy_to_user((unsigned int *) arg, &(dma_buffers[0].handle), sizeof(unsigned int));
+			dma_buffers[i].u_buffer_addr = vm_mmap(fp, (unsigned long)(dma_buffers[i].handle),124*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
+			check = copy_to_user((unsigned long *) arg, &(dma_buffers[0].u_buffer_addr), sizeof(unsigned long));
 			if(check)
 			{
 				printk(KERN_ALERT "copy to user failure");
@@ -294,12 +309,12 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case START_DMA:
 			fifo_write(Flush,0x00);
 			// START DMA should use arg from user to identify which buffer is done ?
-			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].u_buffer_addr)<<6);
-			fifo_write(BufferA_Config,(unsigned int)(BUFF_SIZE));
+			fifo_write(BufferA_Addr,((unsigned int)dma_buffers[0].handle)<<6);
+			fifo_write(BufferA_Config,(unsigned int)(19)); // Hard code to be changed
 			// Debug stage Just check one dma
 			
 			fifo_write(Flush,0x00);
-			fifo_flush();
+			fifo_flush_SMP();
 		break;
 		
 		case VMODE:	
