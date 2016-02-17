@@ -140,7 +140,7 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	fifo_flush();
 		
     pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
-	pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[i].handle)));
+	pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[0].handle)));
 	iounmap(kyouko3.k_control_base);
 	iounmap(kyouko3.k_card_ram_base);
 	iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
