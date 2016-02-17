@@ -453,6 +453,6 @@ void __exit kyouko_exit(void)
 }
 
 module_exit(kyouko_exit);
-module_init(kyouko_init);
+module_init(kyouko_init);;
 
 
