@@ -291,16 +291,16 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		{
 			kyouko3.dma_fill=0;
 			kyouko3.dma_drain=0;
-			dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &dma_buffers[i].handle);
+			dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &(dma_buffers[i].handle));
 			dma_buffers[i].count=0;
-			dma_buffers[i].u_buffer_addr = vm_mmap(fp, (unsigned long)(dma_buffers[i].handle),124*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
-			check = copy_to_user((unsigned long *) arg, &(dma_buffers[0].u_buffer_addr), sizeof(unsigned long));
+			dma_buffers[i].u_buffer_addr = vm_mmap(fp, ((unsigned long)(dma_buffers[i].handle)),124*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
+			check = copy_to_user((int *) arg, &(dma_buffers[0].u_buffer_addr), sizeof(unsigned int));
 			if(check)
 			{
 				printk(KERN_ALERT "copy to user failure");
 				return -1;
 			}
-			printk(KERN_DEBUG "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
+			printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
 		
 		}
 		
@@ -309,12 +309,12 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case START_DMA:
 			fifo_write(Flush,0x00);
 			// START DMA should use arg from user to identify which buffer is done ?
-			fifo_write(BufferA_Address,((unsigned int)dma_buffers[0].handle)<<6);
-			fifo_write(BufferA_Config,(unsigned int)(19)); // Hard code to be changed
+			fifo_write(BufferA_Address,((unsigned int)dma_buffers[0].handle));
+			fifo_write(BufferA_Config,(unsigned int)(19*sizeof(float))); // Hard code to be changed
 			// Debug stage Just check one dma
 			
 			fifo_write(Flush,0x00);
-			fifo_flush_SMP();
+			fifo_flush();
 		break;
 		
 		case VMODE:	
@@ -334,7 +334,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 				K_WRITE_REG(0x9000+_DFrame,0);
 				K_WRITE_REG(Acceleration,0x40000000);
 				
-				
+				udelay(2);
 				K_WRITE_REG(ModeSet,0);
 				udelay(10);
 				fifo_write(Clear_Color,0x3F000000);//load clear color
