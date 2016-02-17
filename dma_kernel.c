@@ -138,11 +138,16 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	//pci_disable_msi(kyouko3.dev);
 	kyouko3_ioctl(fp,VMODE,GRAPHICS_OFF);
 	fifo_flush();
-	iounmap(kyouko3.k_control_base);
-	iounmap(kyouko3.k_card_ram_base);	
+		
     	pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
-	//pci_clear_master(kyouko3.dev);
-	//pci_disable_device(kyouko3.dev);
+	 pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[i].handle));
+	iounmap(kyouko3.k_control_base);
+	iounmap(kyouko3.k_card_ram_base);
+	iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
+	
+	pci_clear_master(kyouko3.dev);
+	pci_disable_device(kyouko3.dev);
+	
 	printk(KERN_ALERT " kyouko3 : BUUH BYE\n");	
 	return 0;
 }
@@ -446,6 +451,7 @@ int __init kyouko_init(void)
 
 void __exit kyouko_exit(void)
 {
+	
 	pci_unregister_driver(&kyouko3_pci_dev);
 	cdev_del(&kyouko3_cdev);	//mychar_dev);
 	printk(KERN_ALERT "Kyouko3 Exiting");
