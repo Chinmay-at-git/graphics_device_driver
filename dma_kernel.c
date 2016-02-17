@@ -139,8 +139,8 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	kyouko3_ioctl(fp,VMODE,GRAPHICS_OFF);
 	fifo_flush();
 		
-    	pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
-	 pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[i].handle));
+    pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
+	pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[i].handle)));
 	iounmap(kyouko3.k_control_base);
 	iounmap(kyouko3.k_card_ram_base);
 	iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
@@ -331,7 +331,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 				K_WRITE_REG(0x8000+_FRowPitch,1024*4);
 				K_WRITE_REG(0x8000+_FFormat,0xf888);
 				K_WRITE_REG(0x8000+_FAddress,0);
-
+				
 				K_WRITE_REG(0x9000+_DWidth,1024);
 				K_WRITE_REG(0x9000+_DHeight,768);
 				K_WRITE_REG(0x9000+_DVirtX,0);
