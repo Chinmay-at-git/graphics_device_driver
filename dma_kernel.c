@@ -282,9 +282,8 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 {
 //	float var = 1.0f;
 //	unsigned int int_var = 0,ret_val =0;
-	int ret,i,check;
+	int ret,i,check, count;
 	struct FIFO_entry cur_entry;
-	unsigned int mask= 1<<31;
 	switch(cmd)
 	{
 		case UNBIND_DMA:
@@ -305,20 +304,21 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 				printk(KERN_ALERT "copy to user failure");
 				return -1;
 			}
-			printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
+			//printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
 		
 		}
 		
 		break;
 		
 		case START_DMA:
-			fifo_write(Flush,0x00);
-			// START DMA should use arg from user to identify which buffer is done ?
-			fifo_write(BufferA_Address,((unsigned int)dma_buffers[0].handle));
-			fifo_write(BufferA_Config,(unsigned int)(19*sizeof(float))); // Hard code to be changed
-			// Debug stage Just check one dma
-			
-			fifo_write(Flush,0x00);
+      			fifo_write(Flush, 0x00);
+
+      			ret = copy_from_user( (int *)&count, (unsigned int *) arg, sizeof(unsigned int));
+
+      			fifo_write(BufferA_Address, (unsigned int)dma_buffers[0].handle);
+      			fifo_write(BufferA_Config, (unsigned int)(count*sizeof(float)));
+
+      			fifo_write(Flush, 0x00);
 			fifo_flush();
 		break;
 		
