@@ -13,18 +13,23 @@
 #include <linux/ioctl.h>
 //#include <linux/asm/mmap.h>
 #include <linux/cred.h>
+#include <linux/interrupt.h>
+#include <linux/spinlock.h>
+#include <linux/sched.h>
 #include <linux/errno.h>
+#include <linux/signal.h>
 #include "defs.h"
 #define BUFF_SIZE (19*4)
 #define pci_vendor_ids_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORCI_KYOUKO3 0x1113
 #define Device_RAM 0x0020
-#define NO_OF_BUFFS 1
+#define NO_OF_BUFFS 2
 MODULE_LICENSE("Proprietary");
 MODULE_AUTHOR("CS");
 long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg);
 void fifo_flush(void);
-
+DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
+DEFINE_SPINLOCK(SMP_lock);
 
 /*
 
@@ -127,7 +132,8 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 	size_ram = K_READ_REG(Device_RAM);
 	size_ram = size_ram * 1024* 1024;
 	kyouko3.k_card_ram_base = ioremap(kyouko3.p_card_ram,size_ram);
-	kyouko3.user_id =0;//   current->uid;
+	kyouko3.user_id = get_current_cred()->uid.val; 
+	printk(KERN_ALERT "User ID is %d",kyouko3.user_id);
 	init_fifo();
 	return 0;
 }
@@ -155,7 +161,6 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 int kyouko3_mmap(struct file *fp,struct vm_area_struct *vma)
 {
 	int ret=0;
-	// check if user is root
 
 
 	switch(vma->vm_pgoff << PAGE_SHIFT)
@@ -276,6 +281,77 @@ if(ret)
 fifo_write(Fifo_entry.command, Fifo_entry.value);
 }
 */
+// Interrupt Handler
+irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
+		{
+			unsigned int status_read;
+			spin_lock(&SMP_lock);
+			status_read = K_READ_REG(Status);
+			K_WRITE_REG(Status,0xf);
+			if(status_read & 0x02 == 0)
+			{
+				spin_unlock(&SMP_lock);
+				return IRQ_NONE;  //Spurious interrupt
+			}
+			// Interrupt is valid now
+			kyouko3.dma_drain= (kyouko3.dma_drain + 1) % NO_OF_BUFFS;
+			
+			if (kyouko3.dma_fill != kyouko3.dma_drain)
+			{
+					fifo_write(BufferA_Address, (unsigned int)dma_buffers[kyouko3.dma_drain].handle);
+					fifo_write(BufferA_Config, (unsigned int)(dma_buffers[kyouko3.dma_drain].count*sizeof(float)));
+					fifo_flush_SMP();
+			}
+			
+			spin_unlock(&SMP_lock);
+			if(kyouko3.suspend)
+			{	
+				kyouko3.suspend = 0; //Clears the  suspension of user
+				wake_up_interruptible(&dma_snooze); // Send it when user is suspended. 
+			}
+			
+			return(IRQ_HANDLED);
+			
+		}
+
+
+// Start DMA function 
+void start_transfer(void)
+{
+	
+	
+	if(kyouko3.dma_fill == kyouko3.dma_drain)
+	{
+			// If user calls start dma and fill == drain, queue is empty
+			// because we will not  go back to user when buffer is full
+			
+		kyouko3.dma_fill =(kyouko3.dma_fill + 1) % NO_OF_BUFFS;
+		fifo_write(BufferA_Address, (unsigned int)dma_buffers[kyouko3.dma_drain].handle);
+		fifo_write(BufferA_Config, (unsigned int)(dma_buffers[kyouko3.dma_drain].count*sizeof(float)));
+		fifo_flush_SMP();
+		// Starting the transfer after buffer is empty..
+		return ; /
+	}
+	
+	kyouko3.dma_fill =(kyouko3.dma_fill + 1) % NO_OF_BUFFS;
+	if(kyouko3.dma_fill == kyouko3.dma_drain)
+	{
+		kyouko3.suspend=1;
+	}
+	
+	while(suspend)
+	{
+		spin_unlock_irqrestore(&SMP_lock,kyouko3.flags); // release lock before the sleep;
+		wait_event_interruptible(dma_snooze,kyouko3.suspend==0);
+		// Interrupt routine will make suspend == 0. Till then user sleeps
+		spin_lock_irqsave(&SMP_lock,kyouko3.flags);
+		// Take the lock back before exiting the loop
+	}
+	
+	return;
+	
+}
+
 
 
 long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
@@ -291,35 +367,56 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		break;
 		case BIND_DMA:
 		printk(KERN_DEBUG "Binding DMA");
-		for(i=0;i<NO_OF_BUFFS ; i++)
+		for(i=0;i< NO_OF_BUFFS ; i++)
 		{
 			kyouko3.dma_fill=0;
 			kyouko3.dma_drain=0;
+			
 			dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &(dma_buffers[i].handle));
 			dma_buffers[i].count=0;
 			dma_buffers[i].u_buffer_addr = vm_mmap(fp, ((unsigned long)(dma_buffers[i].handle)),124*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);
-			check = copy_to_user((int *) arg, &(dma_buffers[0].u_buffer_addr), sizeof(unsigned int));
+			
 			if(check)
 			{
 				printk(KERN_ALERT "copy to user failure");
 				return -1;
 			}
 			//printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
-		
+			
+		}
+		pci_enable_msi(kyouko3.dev);
+		ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
+		if(ret)
+		{
+			printk(KERN_EMERG "Bind DMA failed, returning error code");
+			return -1;
+		}
+		K_WRITE_REG(Status,0xffffffff);
+		K_WRITE_REG(InterruptSet,2);
+		check = copy_to_user((int *) arg, &(dma_buffers[0].u_buffer_addr), sizeof(unsigned int));
+		if(check)
+		{
+			printk(KERN_ALERT "START_DMA:Copy to user fails");
 		}
 		
 		break;
 		
 		case START_DMA:
-      			fifo_write(Flush, 0x00);
-
-      			ret = copy_from_user( (int *)&count, (unsigned int *) arg, sizeof(unsigned int));
-
-      			fifo_write(BufferA_Address, (unsigned int)dma_buffers[0].handle);
-      			fifo_write(BufferA_Config, (unsigned int)(count*sizeof(float)));
-
-      			fifo_write(Flush, 0x00);
-			fifo_flush();
+				//fifo_write(Flush, 0x00); //Making this user responsibility for SMP purpose
+				spin_lock_irqsave(&SMP_lock,kyouko3.flags);
+      			ret = copy_from_user( &dma_buffers[kyouko3.dma_fill].count, (unsigned int *) arg, sizeof(unsigned int));
+				if(ret)  printk(KERN_ALERT "Start_DMA: copy from user failed");
+				
+      			//fifo_write(BufferA_Address, (unsigned int)dma_buffers[0].handle);
+      			//fifo_write(BufferA_Config, (unsigned int)(count*sizeof(float)));
+				start_transfer(); // Actual start dma
+      			// fifo_write(Flush, 0x00);
+				ret = copy_to_user((int *) arg, &(dma_buffers[kyouko3.dma_fill].u_buffer_addr), sizeof(unsigned int));
+				if(ret)  printk(KERN_ALERT "Start_DMA: copy_to_user failed");
+				// Note that start_dma() changes dma_fill 
+				//fifo_flush();
+				spin_unlock_irqrestore(&SMP_lock,kyouko3.flags);
+				
 		break;
 		
 		case VMODE:	

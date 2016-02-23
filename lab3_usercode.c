@@ -113,7 +113,6 @@ int main(void)
 	arg[p1++] = Vertex_Coordinate + 8;
 	arg[p1++] =  0;
 	arg[p1++] = Vertex_Coordinate + 12;
-	
 	arg[p1++] = int_var;
 
 	arg[p1++] = Vertex_Emit;
@@ -130,16 +129,6 @@ int main(void)
 	arg[p1++] = Vertex_Emit;
 	arg[p1++] = 0;
 
-		arg[p1++] = Vertex_Coordinate + 0;
-	arg[p1++] = int_bytwo;
-	arg[p1++] = Vertex_Coordinate + 4;
-	arg[p1++]= int_byeight;
-	arg[p1++]= Vertex_Coordinate + 8;
-	arg[p1++]= 0;
-	arg[p1++] = Vertex_Coordinate + 12;
-	arg[p1++] = 0;
-	arg[p1++] = Vertex_Emit;
-	arg[p1++] = 0;
 	
 		arg[p1++] = Vertex_Coordinate + 0;
 	arg[p1++] = int_bytwo;
@@ -151,6 +140,9 @@ int main(void)
 	arg[p1++] = 0;
 	arg[p1++] = Vertex_Emit;
 	arg[p1++] = 0;
+	
+	arg[p1++] = Primitive;
+    arg[p1++] = 0;
 	
 	printf("DMA completed ? ");
 	ioctl(fd,START_DMA,&arg);
