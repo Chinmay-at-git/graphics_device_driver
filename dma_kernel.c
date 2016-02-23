@@ -84,7 +84,7 @@ struct kyouko3{
 	struct pci_dev *dev;
 	struct fifo_struct fifo;
 	unsigned int graphics_on;
-	
+	char suspend;
 	
 }kyouko3;
 
@@ -135,6 +135,7 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 	kyouko3.user_id = get_current_cred()->uid.val; 
 	printk(KERN_ALERT "User ID is %d",kyouko3.user_id);
 	init_fifo();
+	kyouko3.suspend =0;
 	return 0;
 }
 
@@ -339,7 +340,7 @@ void start_transfer(void)
 		kyouko3.suspend=1;
 	}
 	
-	while(suspend)
+	while(kyouko3.suspend)
 	{
 		spin_unlock_irqrestore(&SMP_lock,kyouko3.flags); // release lock before the sleep;
 		wait_event_interruptible(dma_snooze,kyouko3.suspend==0);
