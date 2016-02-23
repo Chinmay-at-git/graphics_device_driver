@@ -132,10 +132,13 @@ int main()
     triangle(buffer);
 
     //start the DMA buffer
+	
     unsigned int count = 19;
-    arg = *(unsigned int*)&count; //7 for one point
+    
+	arg = *(unsigned int*)&count; //7 for one point
     result = ioctl(fd, START_DMA, &arg);
-
+	buffer = (unsigned int *) arg;
+	// Point buffer to next addr!
     //result = ioctl(fd, FIFO_FLUSH, 0);
 
     //U_WRITE_REG(Flush, 0);
