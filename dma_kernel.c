@@ -23,7 +23,7 @@
 #define pci_vendor_ids_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORCI_KYOUKO3 0x1113
 #define Device_RAM 0x0020
-#define NO_OF_BUFFS 2
+#define NO_OF_BUFFS 6
 MODULE_LICENSE("Proprietary");
 MODULE_AUTHOR("CS");
 long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg);
@@ -150,7 +150,12 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[0].handle)));
 	iounmap(kyouko3.k_control_base);
 	iounmap(kyouko3.k_card_ram_base);
-	iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
+	for(i = 0; i < NO_OF_BUFFS; i++)
+      {
+        			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
+        			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
+     }
+	//iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
 	
 	pci_clear_master(kyouko3.dev);
 	pci_disable_device(kyouko3.dev);
@@ -364,7 +369,18 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 	switch(cmd)
 	{
 		case UNBIND_DMA:
-		return 0; // TO be filled!!
+		{
+			for(i = 0; i < NO_OF_BUFFS; i++)
+      			{
+        			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
+        			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
+      			}
+      			//K_WRITE_REG(InterruptSet, 0x0);
+      			//free_irq();
+      			//disable_msi();
+      			break;
+    	}
+		
 		break;
 		case BIND_DMA:
 		printk(KERN_DEBUG "Binding DMA");
