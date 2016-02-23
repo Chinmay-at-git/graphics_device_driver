@@ -331,7 +331,7 @@ void start_transfer(void)
 		fifo_write(BufferA_Config, (unsigned int)(dma_buffers[kyouko3.dma_drain].count*sizeof(float)));
 		fifo_flush_SMP();
 		// Starting the transfer after buffer is empty..
-		return ; /
+		return ; 
 	}
 	
 	kyouko3.dma_fill =(kyouko3.dma_fill + 1) % NO_OF_BUFFS;
