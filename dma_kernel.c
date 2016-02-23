@@ -143,6 +143,7 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 {
 	//free_irq(kyouko3.dev->irq,&kyouko3);
 	//pci_disable_msi(kyouko3.dev);
+	int i;
 	kyouko3_ioctl(fp,VMODE,GRAPHICS_OFF);
 	fifo_flush();
 		
