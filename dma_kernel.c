@@ -408,7 +408,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			//printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
 			
 		}
-		buffers_alloted = 1;
+		kyouko3.buffers_alloted = 1;
 		pci_enable_msi(kyouko3.dev);
 		ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
 		if(ret)
