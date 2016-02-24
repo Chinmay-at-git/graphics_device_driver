@@ -85,7 +85,7 @@ struct kyouko3{
 	struct fifo_struct fifo;
 	unsigned int graphics_on;
 	char suspend;
-	
+	char buffers_alloted;
 }kyouko3;
 
 unsigned int K_READ_REG( unsigned int reg)
@@ -146,16 +146,19 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	int i;
 	kyouko3_ioctl(fp,VMODE,GRAPHICS_OFF);
 	fifo_flush();
-		
+	for(i = 0; i < NO_OF_BUFFS; i++)
+     {	
+		if(kyouko3.buffers_alloted==0)
+				break;
+        	vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
+        	pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
+     }
+	
     pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
-	pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[0].handle)));
+	//pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[0].handle)));
 	iounmap(kyouko3.k_control_base);
 	iounmap(kyouko3.k_card_ram_base);
-	for(i = 0; i < NO_OF_BUFFS; i++)
-      {
-        			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
-        			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
-     }
+	
 	//iounmap(dma_buffers[0].k_buffer_addr); // dma_buffer[] should be generalized
 	
 	pci_clear_master(kyouko3.dev);
@@ -371,6 +374,8 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 	{
 		case UNBIND_DMA:
 		{
+			if(!kyouko3.buffers_alloted)
+				break;
 			for(i = 0; i < NO_OF_BUFFS; i++)
       			{
         			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
@@ -379,6 +384,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
       			//K_WRITE_REG(InterruptSet, 0x0);
       			//free_irq();
       			//disable_msi();
+				buffers_alloted =0;
       			break;
     	}
 		
@@ -402,6 +408,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			//printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
 			
 		}
+		buffers_alloted = 1;
 		pci_enable_msi(kyouko3.dev);
 		ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
 		if(ret)
