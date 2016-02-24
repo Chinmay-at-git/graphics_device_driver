@@ -384,7 +384,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
       			//K_WRITE_REG(InterruptSet, 0x0);
       			//free_irq();
       			//disable_msi();
-				buffers_alloted =0;
+				kyouko3.buffers_alloted =0;
       			break;
     	}
 		
