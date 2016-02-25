@@ -54,7 +54,7 @@ struct dma_buffers_struct
 
 
 
-//struct cdev mychar_dev;
+//struct cdev mychar_devs;
 struct cdev kyouko3_cdev;
 struct FIFO_entry
 {
@@ -84,8 +84,8 @@ struct kyouko3{
 	struct pci_dev *dev;
 	struct fifo_struct fifo;
 	unsigned int graphics_on;
-	char suspend;
-	char buffers_alloted;
+	char suspend;         //flag
+	char buffers_alloted; //flag
 }kyouko3;
 
 unsigned int K_READ_REG( unsigned int reg)
@@ -136,6 +136,7 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 	printk(KERN_ALERT "User ID is %d",kyouko3.user_id);
 	init_fifo();
 	kyouko3.suspend =0;
+	fifo_flush();
 	return 0;
 }
 
@@ -153,7 +154,8 @@ int kyouko3_release( struct inode *inode, struct file *fp)
         	vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
         	pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
      }
-	
+	kyouko3.buffers_alloted = 0;
+	kyouko3.suspend = 0;
     pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
 	//pci_free_consistent(kyouko3.dev, 124*1024,dma_buffers[0].k_buffer_addr, *((dma_addr_t*)&(dma_buffers[0].handle)));
 	iounmap(kyouko3.k_control_base);
@@ -164,7 +166,7 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	pci_clear_master(kyouko3.dev);
 	pci_disable_device(kyouko3.dev);
 	
-	printk(KERN_ALERT " kyouko3 : BUUH BYE\n");	
+	printk(KERN_ALERT " kyouko3_ release : Bye!!\n");	
 	return 0;
 }
 
@@ -384,6 +386,9 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
       			//K_WRITE_REG(InterruptSet, 0x0);
       			//free_irq();
       			//disable_msi();
+				K_WRITE_REG(InterruptSet,0);
+				pci_disable_msi(kyouko3.dev);
+				free_irq(kyouko3.dev->irq,kyouko3.dev);
 				kyouko3.buffers_alloted =0;
       			break;
     	}
@@ -408,6 +413,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			//printk(KERN_ALERT "\nAddress: %ld \nConfig %ld",dma_buffers[0].handle,dma_buffers[0].count);
 			
 		}
+		
 		kyouko3.buffers_alloted = 1;
 		pci_enable_msi(kyouko3.dev);
 		ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
@@ -573,7 +579,6 @@ int __init kyouko_init(void)
 
 void __exit kyouko_exit(void)
 {
-	
 	pci_unregister_driver(&kyouko3_pci_dev);
 	cdev_del(&kyouko3_cdev);	//mychar_dev);
 	printk(KERN_ALERT "Kyouko3 Exiting");
