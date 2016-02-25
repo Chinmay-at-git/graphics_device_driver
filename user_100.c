@@ -147,11 +147,11 @@ int main()
     //U_WRITE_REG(Flush, 0);
   }
 
-  result = ioctl(fd, UNBIND_DMA, 0);
+  
 
   //sleep
   sleep(5);
-
+	result = ioctl(fd, UNBIND_DMA, 0);
   result = ioctl(fd, VMODE, GRAPHICS_OFF);  //turn graphics mode off
   close(fd);
 
