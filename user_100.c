@@ -113,9 +113,9 @@ int main()
   //ioctl call to sync which checks FIFO_DEPTH
 
   //bind the DMA buffer
-  ioctl(fd,FIFO_FLUSH);
+  ioctl(fd,FIFO_FLUSH,0);
   result = ioctl(fd, BIND_DMA, &arg);
-	ioctl(fd,FIFO_FLUSH);
+	ioctl(fd,FIFO_FLUSH,0);
   kyouko3.header.stride = 5;
   kyouko3.header.w = 0;
   kyouko3.header.a = 1;
@@ -137,9 +137,9 @@ int main()
     unsigned int count = 19;
     
 	arg = *(unsigned int*)&count; //7 for one point
-    ioctl(fd,FIFO_FLUSH);
+    ioctl(fd,FIFO_FLUSH,0);
 	result = ioctl(fd, START_DMA, &arg);
-	ioctl(fd,FIFO_FLUSH);
+	ioctl(fd,FIFO_FLUSH,0);
 	buffer = (unsigned int *) arg;
 	// Point buffer to next addr!
     //result = ioctl(fd, FIFO_FLUSH, 0);
@@ -151,8 +151,9 @@ int main()
 
   //sleep
   sleep(5);
-	result = ioctl(fd, UNBIND_DMA, 0);
   result = ioctl(fd, VMODE, GRAPHICS_OFF);  //turn graphics mode off
+	result = ioctl(fd, UNBIND_DMA, 0);
+//  result = ioctl(fd, VMODE, GRAPHICS_OFF);  //turn graphics mode off
   close(fd);
 
   return 0;
