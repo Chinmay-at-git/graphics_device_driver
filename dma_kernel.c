@@ -31,12 +31,6 @@ void fifo_flush(void);
 DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 DEFINE_SPINLOCK(SMP_lock);
 
-/*
-
-How the buffer must be written?
-Should we give registers and values as we done in Fifo?
-
-*/
 struct dma_header_struct
 {
 	uint32_t address:14;
