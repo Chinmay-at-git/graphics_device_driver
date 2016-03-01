@@ -266,10 +266,10 @@ void fifo_flush_SMP(void)
 {
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 //	wait_on_fifo(); 
-	kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
+	kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
-		kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
+		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 		//schedule();
 	}
 	// You may wanna make it a separate function -done
@@ -418,6 +418,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		}
 		
 		kyouko3.buffers_alloted = 1;
+		K_WRITE_REG(Status,0xffffffff);
 		pci_enable_msi(kyouko3.dev);
 		ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
 		if(ret)
