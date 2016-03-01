@@ -273,7 +273,7 @@ void fifo_flush_SMP(void)
 		//schedule();
 	}
 	// You may wanna make it a separate function -done
-	*/
+	
 //	FIFO_FLUSH: Mirror the fifo in in driver. 
 };
 // FIFO_QUEUE :
