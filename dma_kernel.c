@@ -139,7 +139,11 @@ int kyouko3_release( struct inode *inode, struct file *fp)
 	//free_irq(kyouko3.dev->irq,&kyouko3);
 	//pci_disable_msi(kyouko3.dev);
 	int i;
+	K_WRITE_REG(InterruptSet,0);	
+	K_WRITE_REG(Status,0xf);
 	kyouko3_ioctl(fp,VMODE,GRAPHICS_OFF);
+	
+	
 	fifo_flush();
 	for(i = 0; i < NO_OF_BUFFS; i++)
      {	
@@ -262,7 +266,8 @@ void fifo_flush_SMP(void)
 {
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 //	wait_on_fifo(); 
-	/*while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
+	kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
+	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
 		kyouko3.fifo.tail_cache = K_READ_REG(FIFOTail);
 		//schedule();
@@ -372,6 +377,10 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		{
 			if(!kyouko3.buffers_alloted)
 				break;
+
+			K_WRITE_REG(InterruptSet,0);	
+			K_WRITE_REG(Status,0xf);
+
 			for(i = 0; i < NO_OF_BUFFS; i++)
       			{
         			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
