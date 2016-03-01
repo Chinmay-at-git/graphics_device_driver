@@ -50,7 +50,7 @@ float randF_pos(void)
   return 2*((float)rand()/(float)RAND_MAX)-1;
 }
 
-void triangle(unsigned int* buffer)
+void triangle(unsigned int *buffer)
 {
   float r, g, b, x, y;
   float z = 0.0;
@@ -110,13 +110,14 @@ int main()
   fd = open("/dev/kyouko3", O_RDWR);
   result = ioctl(fd, VMODE, GRAPHICS_ON);  //turn graphics mode on
 
-  //ioctl call to sync which checks FIFO_DEPTH
-
   //bind the DMA buffer
-  ioctl(fd,FIFO_FLUSH,0);
-  arg = 19;
   result = ioctl(fd, BIND_DMA, &arg);
-	ioctl(fd,FIFO_FLUSH,0);
+
+  kyouko3.entry.command = Flush;
+  kyouko3.entry.value = 0x00;
+  result = ioctl(fd, FIFO_QUEUE, &kyouko3.entry);
+  result = ioctl(fd, FIFO_FLUSH, 0);
+
   kyouko3.header.stride = 5;
   kyouko3.header.w = 0;
   kyouko3.header.a = 1;
@@ -126,35 +127,38 @@ int main()
   kyouko3.header.count = 3;        //single triangle
   kyouko3.header.opcode = 0x14;    //for triangle
 
-  unsigned int* buffer = (unsigned int*)(arg);
-
+  unsigned int* buffer = (unsigned int *)arg;
+  unsigned int count = 19;
+    
   for(i = 0; i < 100; i++)
   {
     //calling the function to implement a triangle
     triangle(buffer);
 
     //start the DMA buffer
-	
-    unsigned int count = 19;
-    
-	arg = *(unsigned int*)&count; //7 for one point
-    ioctl(fd,FIFO_FLUSH,0);
-	result = ioctl(fd, START_DMA, &arg);
-	ioctl(fd,FIFO_FLUSH,0);
-	buffer = (unsigned int *) arg;
-	// Point buffer to next addr!
-    //result = ioctl(fd, FIFO_FLUSH, 0);
+    arg = *(unsigned int*)&count;
+    result = ioctl(fd, START_DMA, &arg);
 
-    //U_WRITE_REG(Flush, 0);
+    kyouko3.entry.command = Flush;
+    kyouko3.entry.value = 0x00;
+    result = ioctl(fd, FIFO_QUEUE, &kyouko3.entry);
+    result = ioctl(fd, FIFO_FLUSH, 0);
+
+    // Point buffer to next addr!
+    buffer = (unsigned int *) arg;
   }
 
-  
+  result = ioctl(fd, UNBIND_DMA, 0);
 
   //sleep
   sleep(5);
+
+  kyouko3.entry.command = Flush;
+  kyouko3.entry.value = 0x00;
+  result = ioctl(fd, FIFO_QUEUE, &kyouko3.entry);
+  result = ioctl(fd, FIFO_FLUSH, 0);
+
   result = ioctl(fd, VMODE, GRAPHICS_OFF);  //turn graphics mode off
-	result = ioctl(fd, UNBIND_DMA, 0);
-//  result = ioctl(fd, VMODE, GRAPHICS_OFF);  //turn graphics mode off
   close(fd);
 
   return 0;
