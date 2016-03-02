@@ -13,6 +13,7 @@
 #include <linux/cred.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
 #include <linux/sched.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
@@ -91,7 +92,7 @@ void K_WRITE_REG(unsigned int reg,unsigned int val)
 	*(kyouko3.k_control_base+(reg>>2)) = val;
 }
 
-unsigned int init_fifo(void)
+void init_fifo(void)
 {
 	kyouko3.fifo.k_base = pci_alloc_consistent(kyouko3.dev,8192u,(dma_addr_t*)&kyouko3.fifo.p_base);
 	//load FIFOStart with kyouko3.fifo.p_base
@@ -101,8 +102,6 @@ unsigned int init_fifo(void)
 
 	kyouko3.fifo.head = 0;
 	kyouko3.fifo.tail_cache = 0;
-
-	return 0;
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp)
@@ -268,7 +267,7 @@ void start_transfer(void)
 		return ; 
 	}
 	
-	kyouko3.dma_fill =(kyouko3.dma_fill + 1) % NO_OF_BUFFS;
+	kyouko3.dma_fill = (kyouko3.dma_fill + 1) % NO_OF_BUFFS;
 	if(kyouko3.dma_fill == kyouko3.dma_drain)
 	{
 		kyouko3.suspend=1;
@@ -301,7 +300,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
       			}
 				K_WRITE_REG(InterruptSet,0);
 				pci_disable_msi(kyouko3.dev);
-				free_irq(kyouko3.dev->irq,kyouko3.dev);
+				free_irq(kyouko3.dev->irq,&kyouko3);
 				kyouko3.buffers_alloted =0;
       			break;
     		}
@@ -310,20 +309,25 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			printk(KERN_DEBUG "Binding DMA");
 			for(i=0;i< NO_OF_BUFFS ; i++)
 			{
-				kyouko3.dma_fill=0;
-				kyouko3.dma_drain=0;
-			
 				dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &(dma_buffers[i].handle));
 				dma_buffers[i].count=0;
 				dma_buffers[i].u_buffer_addr = vm_mmap(fp, ((unsigned long)(dma_buffers[i].handle)),124*1024, PROT_READ|PROT_WRITE, MAP_SHARED, dma_buffers[i].handle);	
 			}
 		
+			kyouko3.dma_fill=0;
+			kyouko3.dma_drain=0;
 			kyouko3.buffers_alloted = 1;
-			pci_enable_msi(kyouko3.dev);
+			ret = pci_enable_msi(kyouko3.dev);
+			{	
+				printk(KERN_EMERG "Bind DMA failed, returning error code");
+				return -1;
+			}
+
 			ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
 			if(ret)
 			{
 				printk(KERN_EMERG "Bind DMA failed, returning error code");
+				pci_disable_msi(kyouko3.dev);
 				return -1;
 			}
 
@@ -478,7 +482,7 @@ void __exit kyouko_exit(void)
 {
 	pci_unregister_driver(&kyouko3_pci_dev);
 	cdev_del(&kyouko3_cdev);
-	printk(KERN_ALERT "Kyouko3 Exiting");
+	printk(KERN_ALERT "Kyouko3 Exiting\n");
 }
 
 module_exit(kyouko_exit);
