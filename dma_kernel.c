@@ -237,7 +237,7 @@ irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
 	status_read = K_READ_REG(Status);
 	K_WRITE_REG(Status,0xf);
 	
-	if((status_read&0x02) == 0)
+	if((status_read & 0x02) == 0)
 	{
 		spin_unlock(&SMP_lock);
 		return IRQ_NONE;  //Spurious interrupt
@@ -324,22 +324,23 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case UNBIND_DMA:
 		{
 			printk(KERN_ALERT "UNBIND: Waiting till buffers empty");
-			while (kyouko3.dma_fill != kyouko3.dma_drain)
-				; // This is busy wait will interrupts come in and take care of empting bufferspace.
+//			while (kyouko3.dma_fill != kyouko3.dma_drain); // This is busy wait will interrupts come in and take care of empting bufferspace.
 			// Is it needed? Who knows.
-			printk(KERN_ALERT "UNBIND: Waiting completed on buffer_empty");
-			K_WRITE_REG(Status,0xf);
-			K_WRITE_REG(InterruptSet,0);
-			pci_disable_msi(kyouko3.dev);
-			if(!kyouko3.buffers_alloted)
-				break;
+//			printk(KERN_ALERT "UNBIND: Waiting completed on buffer_empty");
+//			K_WRITE_REG(Status,0xf);
+//			K_WRITE_REG(InterruptSet,0);
+//			pci_disable_msi(kyouko3.dev);
+//			if(!kyouko3.buffers_alloted)
+//				break;
 			for(i = 0; i < NO_OF_BUFFS; i++)
       			{
         			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
-        			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
+        			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,dma_buffers[i].handle);
       			}
-				
+				K_WRITE_REG(InterruptSet,0);
 				free_irq(kyouko3.dev->irq,&kyouko3);
+				pci_disable_msi(kyouko3.dev);
+				
 				kyouko3.buffers_alloted =0;
       		break;
     	}
