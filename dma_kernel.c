@@ -206,17 +206,27 @@ void fifo_write_F(unsigned int reg, float value)
 void fifo_flush(void)
 {
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
+	printk(KERN_ALERT "\n In Fifo flush-");
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
 		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 		schedule();
 	}
-};
+	printk(KERN_ALERT "-Fifo flush Completed\n");
+}
 
 void fifo_flush_SMP(void)
 {
+	// SMP is a kind of misnomer, This function is used only in interrupt context and where we take the lock
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
-};
+		printk(KERN_ALERT "\n-Fifo flush SMP started-");
+	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
+	{
+		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
+	//	schedule(); // We need this  
+	}
+		printk(KERN_ALERT "-Fifo flush SMP Completed\n");
+}
 
 // Interrupt Handler
 irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
@@ -235,6 +245,7 @@ irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
 	// Interrupt is valid now
 	kyouko3.dma_drain= (kyouko3.dma_drain + 1) % NO_OF_BUFFS;
 			
+	// Consider now fill==drain. This suggest that queue is empty. If it is empty, Drain is pointing to something which user has not put on, i.e. garbage or old value.  
 	if (kyouko3.dma_fill != kyouko3.dma_drain)
 	{
 		fifo_write(BufferA_Address, (unsigned int)dma_buffers[kyouko3.dma_drain].handle);
@@ -242,13 +253,21 @@ irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
 		fifo_flush_SMP();
 	}
 			
-	spin_unlock(&SMP_lock);
+	
 	if(kyouko3.suspend)
-	{	
+	{
+		// If kyouko3.suspend is exposed outside of spinlock: After the wake_up, If user goes and sends one more buffer and sets the suspend? 
+		// That is not a problem.
+		// One more contention, If suspend == 0, and user goes and sets it up. That, is not also problem.But, suspend ==1, we get in, make it zero, wake user up, 
+		// The user goes and does 
 		kyouko3.suspend = 0; //Clears the  suspension of user
-		wake_up_interruptible(&dma_snooze); // Send it when user is suspended. 
+	//	spin_unlock(&SMP_lock); 
+		wake_up_interruptible(&dma_snooze); 
+// User will contain on spinlock till irq is returned. 
+	//	spin_lock(&SMP_lock);
 	}
-			
+	
+	spin_unlock(&SMP_lock);		
 	return(IRQ_HANDLED);			
 }
 
@@ -270,16 +289,28 @@ void start_transfer(void)
 	kyouko3.dma_fill = (kyouko3.dma_fill + 1) % NO_OF_BUFFS;
 	if(kyouko3.dma_fill == kyouko3.dma_drain)
 	{
+		// This is DMA buffers all full.
 		kyouko3.suspend=1;
 	}
 	
 	while(kyouko3.suspend)
 	{
 		spin_unlock_irqrestore(&SMP_lock,kyouko3.flags); // release lock before the sleep;
+		// Assume: Interrupt comes right now. It frees a buffer and makes suspend==0
+		// But meanwhile, wait_event will continue as normal. User would be put on hold, but as soon as it interrupt finishes with suspend==0, it will come out.
+		// Now we will wait on spin_lock below to allow interrupt to finish clean. 
+		// Suppose, instead of this, many interrupts come and go between waiting period of user, (for any reason): Buffers will be empty all way. 
+		// But that is not a problem. 
 		wait_event_interruptible(dma_snooze,kyouko3.suspend==0);
 		// Interrupt routine will make suspend == 0. Till then user sleeps
 		spin_lock_irqsave(&SMP_lock,kyouko3.flags);
 		// Take the lock back before exiting the loop
+		// What happens when user comes out?
+		// - Its a honorable exit to userspace. User can send more buffers and can choose to go sleep again. Or do the unbind. What if unbind?
+		// If we are in unbind , interrupts come and set the buffers. Interrupt can mess things up. There for, interrupts should be disabled 
+		// Should we wait till fill==drain in unbind? Implemented.
+		// Without the spin lock here: We may have interrupt which clears the suspend and perform wake_up even before user is on sleep;
+		// Then our function comes in and put the user to wait forver!!
 	}
 }
 
@@ -291,6 +322,14 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 	{
 		case UNBIND_DMA:
 		{
+			printk(KERN_ALERT "UNBIND: Waiting till buffers empty");
+			while (kyouko3.fill == kyouko3.drain)
+				; // This is busy wait will interrupts come in and take care of empting bufferspace.
+			// Is it needed? Who knows.
+			printk(KERN_ALERT "UNBIND: Waiting completed on buffer_empty");
+			K_WRITE_REG(Status,0xf);
+			K_WRITE_REG(InterruptSet,0);
+			pci_disable_msi(kyouko3.dev);
 			if(!kyouko3.buffers_alloted)
 				break;
 			for(i = 0; i < NO_OF_BUFFS; i++)
@@ -298,12 +337,11 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
         			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
         			pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,*((dma_addr_t*)&dma_buffers[i].handle));
       			}
-				K_WRITE_REG(InterruptSet,0);
-				pci_disable_msi(kyouko3.dev);
+				
 				free_irq(kyouko3.dev->irq,&kyouko3);
 				kyouko3.buffers_alloted =0;
-      			break;
-    		}
+      		break;
+    	}
 		case BIND_DMA:
 		{
 			printk(KERN_DEBUG "Binding DMA");
@@ -318,7 +356,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			kyouko3.dma_drain=0;
 			kyouko3.buffers_alloted = 1;
 			ret = pci_enable_msi(kyouko3.dev);
-			{	
+			if (ret){	
 				printk(KERN_EMERG "Bind DMA failed, returning error code");
 				return -1;
 			}
@@ -344,7 +382,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case START_DMA:
 		{
 			spin_lock_irqsave(&SMP_lock,kyouko3.flags);
-      			ret = copy_from_user( &dma_buffers[kyouko3.dma_fill].count, (unsigned int *) arg, sizeof(unsigned int));
+      		ret = copy_from_user( &dma_buffers[kyouko3.dma_fill].count, (unsigned int *) arg, sizeof(unsigned int));
 			if(ret)  printk(KERN_ALERT "Start_DMA: copy from user failed");	
 			start_transfer(); // Actual start dma
 			ret = copy_to_user((int *) arg, &(dma_buffers[kyouko3.dma_fill].u_buffer_addr), sizeof(unsigned int));
