@@ -324,7 +324,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 		case UNBIND_DMA:
 		{
 			printk(KERN_ALERT "UNBIND: Waiting till buffers empty");
-			while (kyouko3.dma_fill == kyouko3.dma_drain)
+			while (kyouko3.dma_fill != kyouko3.dma_drain)
 				; // This is busy wait will interrupts come in and take care of empting bufferspace.
 			// Is it needed? Who knows.
 			printk(KERN_ALERT "UNBIND: Waiting completed on buffer_empty");
