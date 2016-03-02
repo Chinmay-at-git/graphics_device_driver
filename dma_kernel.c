@@ -19,13 +19,13 @@
 #include <linux/signal.h>
 #include "defs.h"
 
-#define BUFF_SIZE (19*4)
+#define BUFF_SIZE (124*1024)//(19*4)
 #define pci_vendor_ids_CCORSI 0x1234
 
 #define PCI_DEVICE_ID_CCORCI_KYOUKO3 0x1113
 #define Device_RAM 0x0020
 
-#define NO_OF_BUFFS 6
+#define NO_OF_BUFFS 8
 
 MODULE_LICENSE("Proprietary");
 MODULE_AUTHOR("CS");
@@ -206,27 +206,27 @@ void fifo_write_F(unsigned int reg, float value)
 void fifo_flush(void)
 {
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
-	printk(KERN_ALERT "\n In Fifo flush-");
+//	printk(KERN_ALERT "\n In Fifo flush-");
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
 		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 		schedule();
 	}
-	printk(KERN_ALERT "-Fifo flush Completed\n");
+//	printk(KERN_ALERT "-Fifo flush Completed\n");
 }
 
 void fifo_flush_SMP(void)
 {
 	// SMP is a kind of misnomer, This function is used only in interrupt context and where we take the lock
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
-		printk(KERN_ALERT "\n-Fifo flush SMP started-");
+//		printk(KERN_ALERT "\n-Fifo flush SMP started-");
 	kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
 		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 	//	schedule(); // We need this  
 	}
-		printk(KERN_ALERT "-Fifo flush SMP Completed\n");
+//		printk(KERN_ALERT "-Fifo flush SMP Completed\n");
 }
 
 // Interrupt Handler
@@ -323,7 +323,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 	{
 		case UNBIND_DMA:
 		{
-			printk(KERN_ALERT "UNBIND: Waiting till buffers empty");
+//			printk(KERN_ALERT "UNBIND: Waiting till buffers empty");
 //			while (kyouko3.dma_fill != kyouko3.dma_drain); // This is busy wait will interrupts come in and take care of empting bufferspace.
 			// Is it needed? Who knows.
 //			printk(KERN_ALERT "UNBIND: Waiting completed on buffer_empty");
@@ -346,7 +346,7 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
     	}
 		case BIND_DMA:
 		{
-			printk(KERN_DEBUG "Binding DMA");
+//			printk(KERN_DEBUG "Binding DMA");
 			for(i=0;i< NO_OF_BUFFS ; i++)
 			{
 				dma_buffers[i].k_buffer_addr = pci_alloc_consistent(kyouko3.dev, 124*1024, &(dma_buffers[i].handle));
@@ -359,14 +359,14 @@ long kyouko3_ioctl(struct file *fp,unsigned int cmd, unsigned long arg)
 			kyouko3.buffers_alloted = 1;
 			ret = pci_enable_msi(kyouko3.dev);
 			if (ret){	
-				printk(KERN_EMERG "Bind DMA failed, returning error code");
+//				printk(KERN_EMERG "Bind DMA failed, returning error code");
 				return -1;
 			}
 
 			ret = request_irq(kyouko3.dev->irq,(irq_handler_t) k3_irq,IRQF_SHARED,"k3_irq",&kyouko3);
 			if(ret)
 			{
-				printk(KERN_EMERG "Bind DMA failed, returning error code");
+//				printk(KERN_EMERG "Bind DMA failed, returning error code");
 				pci_disable_msi(kyouko3.dev);
 				return -1;
 			}
