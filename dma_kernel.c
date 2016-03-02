@@ -220,6 +220,7 @@ void fifo_flush_SMP(void)
 	// SMP is a kind of misnomer, This function is used only in interrupt context and where we take the lock
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 		printk(KERN_ALERT "\n-Fifo flush SMP started-");
+	kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
 	while(kyouko3.fifo.tail_cache != kyouko3.fifo.head)
 	{
 		kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
