@@ -60,7 +60,10 @@ void quads(unsigned int *buffer)
 	
 	float zero=0;
 	*buffer++ = *(unsigned int*)&kyouko3.header;
-	
+	for(int i = 0 ; i < 2 ; i++ )
+	{
+	if(i == 0}
+	{
 	xpos= randomtwo();
 	ypos= randomtwo();
 	r = random01();
@@ -108,10 +111,10 @@ void quads(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&xpos;
   *buffer++ = *(unsigned int*)&ypos;
   *buffer++ = *(unsigned int*)&zero;
-  
+  	}
   
 }
-void triangle(unsigned int *buffer)
+/*void triangle(unsigned int *buffer)
 {
   float r, g, b, x, y;
   float z = 0.0;
@@ -159,7 +162,7 @@ void triangle(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&y;
   *buffer++ = *(unsigned int*)&z;
 }
-
+*/
 int main()
 {
   int fd;
@@ -192,7 +195,7 @@ int main()
   unsigned int count = 25;
   unsigned long arg_tmp;
  arg_tmp =   *(unsigned int*)&count;
-  for(i = 0; i < 100; i++)
+  for(i = 0; i < 1; i++)
   {
     //calling the function to implement a triangle
     quads(buffer);
