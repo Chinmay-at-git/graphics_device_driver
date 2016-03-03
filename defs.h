@@ -6,9 +6,9 @@ struct kyouko3_dma_hdr {
   uint32_t stride:5;   //has to be given 5 value
   uint32_t w:1;        //has to be set to 0
   uint32_t a:1;        //has to be set to 1
-  uint32_t unknown:5;  //no idea about this
-  uint32_t known:1;    //has to be set to 1
-  uint32_t unknown2:1; //guess it has to be set to 0
+  uint32_t bit3:5;  //no idea about this
+  uint32_t bit4:1;    //has to be set to 1
+  uint32_t bit5:1; //guess it has to be set to 0
   uint32_t count:10;   //nunber of vertices in the buffer
   uint32_t opcode:8;   //has to be given 0x14(triangle)
 } hdr;
