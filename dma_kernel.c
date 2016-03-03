@@ -181,17 +181,6 @@ void fifo_write(unsigned int reg, unsigned int value)
 	}
 }
 
-void fifo_write_F(unsigned int reg, float value)
-{
-	kyouko3.fifo.k_base[kyouko3.fifo.head].command=reg;
-	kyouko3.fifo.k_base[kyouko3.fifo.head].value=*(unsigned int *)&value;
-	kyouko3.fifo.head++;
-	if(kyouko3.fifo.head >= FIFO_ENTRIES)
-	{
-		kyouko3.fifo.head = 0;
-	}
-}
-
 void fifo_flush(void)
 {
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
