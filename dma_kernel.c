@@ -126,7 +126,20 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 
 int kyouko3_release( struct inode *inode, struct file *fp)
 {
-	kyouko3.buffers_alloted = 0;
+	int i;
+	if(kyouko3.buffers_alloted)
+	{
+		// This condition shows that the user has skipped UNBIND_DMA
+		for(i = 0; i < NO_OF_BUFFS; i++)
+      		{
+      			vm_munmap((unsigned long)dma_buffers[i].k_buffer_addr, (size_t) 124*1024);
+        		pci_free_consistent(kyouko3.dev, 124*1024, dma_buffers[i].k_buffer_addr ,dma_buffers[i].handle);
+      		}
+		K_WRITE_REG(InterruptSet,0);
+		free_irq(kyouko3.dev->irq,&kyouko3);
+		pci_disable_msi(kyouko3.dev);	
+	}
+	kyouko3.buffers_alloted=0;
 	kyouko3.suspend = 0;
     pci_free_consistent(kyouko3.dev,8192u,kyouko3.fifo.k_base,*((dma_addr_t*)&kyouko3.fifo.p_base));
 	iounmap(kyouko3.k_control_base);
@@ -257,7 +270,7 @@ void start_transfer(void)
 		// If user calls start dma and fill == drain, queue is empty
 		// User would be suspended if queue is full and fill==drain
 		kyouko3.dma_fill = (kyouko3.dma_fill + 1) % NO_OF_BUFFS;
-		kyouko3.queue_count ++;
+		kyouko3.queue_count =1;
 		fifo_write(BufferA_Address, (unsigned int)dma_buffers[kyouko3.dma_drain].handle);
 		fifo_write(BufferA_Config, (unsigned int)(dma_buffers[kyouko3.dma_drain].count*sizeof(float)));
 		fifo_flush_SMP(); 
@@ -270,23 +283,22 @@ void start_transfer(void)
 	if(kyouko3.dma_fill == kyouko3.dma_drain && kyouko3.queue_count == NO_OF_BUFFS)
 	{
 		// This is DMA Queue full.
+		// kyouko3.queue_count is an additional check to see if queue is empty ot full
 		kyouko3.suspend=1;
 	}
 	
-	while(kyouko3.suspend)
+	if(kyouko3.suspend)
 	{
 		
 		spin_unlock_irqrestore(&SMP_lock,kyouko3.flags); 
 		// We cannot go to sleep with having a spin_lock. If we do, interrupt handler would not be able to run.
-		// If we release spin_lock before checking suspend: If an interrupt comes and clears suspend  
+		// If we release spin_lock before checking suspend: If an interrupt comes and clears suspend.  
 		wait_event_interruptible(dma_snooze,kyouko3.suspend==0);
 		// Interrupt routine will make suspend == 0. Till then user sleeps
 
 		spin_lock_irqsave(&SMP_lock,kyouko3.flags);
-
-		// Without the spin lock here: We may have interrupt which clears the suspend and perform wake_up even before user is on sleep;
-		// Then our function comes in and put the user to wait forver!!
-
+		// We need spin lock in rest of start_dma case. We unlock it there. 
+		
 	}
 }
 
