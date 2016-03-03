@@ -302,7 +302,7 @@ int dma_draw() {
     buffer = (unsigned int *) arg;
   }
 
-  result = ioctl(fd, UNBIND_DMA, 0);
+  
 
   sleep(5);
 
@@ -310,7 +310,7 @@ int dma_draw() {
   kyouko3.entry.value = 0x00;
   result = ioctl(fd, FIFO_QUEUE, &kyouko3.entry);
   result = ioctl(fd, FIFO_FLUSH, 0);
-
+	result = ioctl(fd, UNBIND_DMA, 0);
   result = ioctl(fd, VMODE, GRAPHICS_OFF);
   close(fd);
 
