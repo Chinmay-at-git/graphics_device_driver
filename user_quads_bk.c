@@ -53,17 +53,14 @@ float randomtwo(void)
 
 }
 
-
+/*
 void quads(unsigned int *buffer)
 {
 	float xpos,ypos,r,g,b;
 	
 	float zero=0;
 	*buffer++ = *(unsigned int*)&kyouko3.header;
-	for(int i = 0 ; i < 2 ; i++ )
-	{
-	if(i == 0}
-	{
+	
 	xpos= randomtwo();
 	ypos= randomtwo();
 	r = random01();
@@ -111,14 +108,14 @@ void quads(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&xpos;
   *buffer++ = *(unsigned int*)&ypos;
   *buffer++ = *(unsigned int*)&zero;
-  	}
   
-}
-/*void triangle(unsigned int *buffer)
+  
+}*/
+void quads(unsigned int *buffer)
 {
   float r, g, b, x, y;
   float z = 0.0;
-
+  float ar,ag,ab,ax,ay,br,bg,bb,bx,by; 	
   *buffer++ = *(unsigned int*)&kyouko3.header;
   //vertex1
   r = randF();
@@ -135,11 +132,11 @@ void quads(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&z;
 
   //vertex2
-  r = randF();
-  g = randF();
-  b = randF();
-  x = randF_pos();
-  y = randF_pos();
+  ar=r = randF();
+  ag=g = randF();
+  ab=b = randF();
+  ax=x = randF_pos();
+  ay=y = randF_pos();
 
   *buffer++ = *(unsigned int*)&r;
   *buffer++ = *(unsigned int*)&g;
@@ -149,6 +146,34 @@ void quads(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&z;
 
   //vertex3
+  br=r = randF();
+  bg=g = randF();
+  bb=b = randF();
+  bx=x = randF_pos();
+  by=y = randF_pos();
+
+  *buffer++ = *(unsigned int*)&r;
+  *buffer++ = *(unsigned int*)&g;
+  *buffer++ = *(unsigned int*)&b;
+  *buffer++ = *(unsigned int*)&x;
+  *buffer++ = *(unsigned int*)&y;
+  *buffer++ = *(unsigned int*)&z;
+  
+  //rewrite buffer for b
+  *buffer++ = *(unsigned int*)&r;
+  *buffer++ = *(unsigned int*)&g;
+  *buffer++ = *(unsigned int*)&b;
+  *buffer++ = *(unsigned int*)&x;
+  *buffer++ = *(unsigned int*)&y;
+  *buffer++ = *(unsigned int*)&z;
+  
+  *buffer++ = *(unsigned int*)&ar;
+  *buffer++ = *(unsigned int*)&ag;
+  *buffer++ = *(unsigned int*)&ab;
+  *buffer++ = *(unsigned int*)&ax;
+  *buffer++ = *(unsigned int*)&ay;
+  *buffer++ = *(unsigned int*)&az;
+  
   r = randF();
   g = randF();
   b = randF();
@@ -162,7 +187,7 @@ void quads(unsigned int *buffer)
   *buffer++ = *(unsigned int*)&y;
   *buffer++ = *(unsigned int*)&z;
 }
-*/
+
 int main()
 {
   int fd;
@@ -188,7 +213,7 @@ int main()
   kyouko3.header.unknown = 0;
   kyouko3.header.known = 1;
   kyouko3.header.unknown2 = 0;
-  kyouko3.header.count = 4;        //single triangle
+  kyouko3.header.count = 6;        //single triangle
   kyouko3.header.opcode = 0x14;    //for triangle
 
   unsigned int* buffer = (unsigned int *)arg;

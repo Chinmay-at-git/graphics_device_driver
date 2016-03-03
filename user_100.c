@@ -130,7 +130,7 @@ int main()
   unsigned int* buffer = (unsigned int *)arg;
   unsigned int count = 19;
     
-  for(i = 0; i < 100; i++)
+  for(i = 0; i < 10000; i++)
   {
     //calling the function to implement a triangle
     triangle(buffer);
