@@ -1,3 +1,16 @@
+/************************************************
+CPSC822 : Project 1 
+Device Driver
+March 3,2016
+Submitted By:
+ Chirantan Sharma 	csharma
+ Prantit Lokre 		plokre
+ Shreya Deodhar 	sdeodha    
+ Chinmay Joshi 		chinmaj
+ Kernel Code : Chinmay and Shreya
+ User code: Chirantan and Prantit
+**************************************************/
+
 //Kyouko register list and ioctl codes
 
 //DMA header:
@@ -49,6 +62,7 @@ struct kyouko3_dma_hdr {
 #define Acceleration		0x1010
 #define FifoStart		0x1020
 #define FifoEnd			0x1024
+
 
 #define BufferA_Address		0x2000
 #define BufferA_Config		0x2008

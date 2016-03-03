@@ -1,3 +1,15 @@
+/***************************************************************************
+CPSC822 : Project 1 
+Device Driver
+March 3,2016
+Submitted By:
+ Chirantan Sharma 	csharma
+ Prantit Lokre 		plokre
+ Shreya Deodhar 	sdeodha    
+ Chinmay Joshi 		chinmaj
+ Kernel Code : Chinmay and Shreya
+ User code: Chirantan and Prantit
+****************************************************************************/
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
