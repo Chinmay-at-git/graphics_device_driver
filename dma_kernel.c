@@ -206,7 +206,7 @@ void fifo_flush(void)
 
 void fifo_flush_SMP(void)
 {
-	// SMP is a kind of misnomer, This function is used only in interrupt context and where we take the lock
+// SMP is a kind of misnomer, This function is used only in interrupt context and where we take the lock
 	K_WRITE_REG(FifoHead,kyouko3.fifo.head);
 //		printk(KERN_ALERT "\n-Fifo flush SMP started-");
 	kyouko3.fifo.tail_cache = K_READ_REG(FifoTail);
@@ -255,7 +255,7 @@ irqreturn_t k3_irq(int irq,void *dev_id,struct pt_regs *regs)
 		
 	//	spin_unlock(&SMP_lock); 
 		wake_up_interruptible(&dma_snooze); 
-// User will contain on spinlock till irq is returned. 
+	// User will contain on spinlock till irq is returned. 
 	//	spin_lock(&SMP_lock);
 	}
 	
